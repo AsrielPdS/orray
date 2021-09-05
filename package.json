@@ -1,0 +1,22 @@
+{
+  "name": "orray",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Asriel Pires",
+  "license": "ISC",
+  "optionalDependencies": {
+    "galho": ""
+  },
+  "dependencies": {
+    "galho": "^1.0.2",
+    "inutil": "^1.0.2"
+  },
+  "devDependencies": {
+    "typescript": "^4.0.5"
+  }
+}
