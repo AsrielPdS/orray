@@ -13,8 +13,8 @@
     "galho": ""
   },
   "dependencies": {
-    "galho": "^1.0.2",
-    "inutil": "^1.0.2"
+    "galho": "",
+    "inutil": ""
   },
   "devDependencies": {
     "typescript": "^4.0.5"
