@@ -1,6 +1,6 @@
 {
   "name": "orray",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -10,12 +10,9 @@
   "author": "Asriel Pires",
   "license": "ISC",
   "optionalDependencies": {
-    "galho": ""
+    "galho": "*"
   },
   "dependencies": {
-    "inutil": ""
-  },
-  "devDependencies": {
-    "typescript": "^4.0.5"
+    "inutil": "*"
   }
 }
