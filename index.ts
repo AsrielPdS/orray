@@ -1041,7 +1041,7 @@ module l {
       });
       return s;
     }
-    bindToE<EType extends E<M>, M>(e: EType, prop: keyof M): this {
+    bindToE(e: E<any,any>, prop: str): this {
       e.dt[prop] = <any>this;
       //for block circular updating event
       let  reloading: boolean;

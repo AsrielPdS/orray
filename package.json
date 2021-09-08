@@ -9,10 +9,6 @@
   "keywords": [],
   "author": "Asriel Pires",
   "license": "ISC",
-  "optionalDependencies": {
-    "galho": "*"
-  },
-  "dependencies": {
-    "inutil": "*"
-  }
+  "optionalDependencies": {},
+  "dependencies": {}
 }
