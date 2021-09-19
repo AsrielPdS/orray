@@ -1,8 +1,8 @@
 {
   "name": "orray",
   "version": "1.0.1",
-  "description": "",
-  "main": "index.js",
+  "description": "observable array",
+  "main": "orray.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

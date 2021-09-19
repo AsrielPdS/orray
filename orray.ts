@@ -1,15 +1,21 @@
-import { isA, is, isF, ET, EventTargetCallback, notF } from "inutil";
-import type { S, ANYElement, E } from "galho";
+import { S, ANYElement, E, ET, EventTargetCallback } from "galho";
 
+type int = number;
+type float = number;
+type str = string;
+type bool = boolean;
+type Key = str | int;
+interface Dic<T = any> { [key: string]: T; }
 
 function l<T = any, A = T>(options: l.IList<T, A>): l.L<T, A>
+function l<T = any, A = T>(array: l.Alias<T, A>, options?: l.IList<T, A>): l.L<T, A>
 function l<T = any, A = T>(array?: Array<T | A> | l.L<T, A>, options?: l.IList<T, A>): l.L<T, A>
 function l<T = any, A = T>(array?: Array<T | A> | l.L<T, A> | l.IList<T, A>, options?: l.IList<T, A>) {
-  if (array && !isA(array)) {
-    options = array
+  if (array && !Array.isArray(array)) {
+    options = <l.IList<any>>array
     array = null;
   }
-  if (is(array, l.L)) {
+  if (array instanceof l.L) {
     if (options) {
       if (options.g)
         for (let g of options.g)
@@ -40,9 +46,9 @@ module l {
   }
   export interface GroupUp<T> {
     add?: T[];
-    addId?: num[];
+    addId?: int[];
     remove?: T[];
-    remvId?: num[];
+    remvId?: int[];
   }
 
   class Group<T = any> extends ET<{ add: T[], remove: T[], up: GroupUp<T>; }> implements ArrayLike<T>, Iterable<T> {
@@ -73,11 +79,11 @@ module l {
         this[this.length++] = item;
 
 
-        this.trigger('add', items);
-        this.trigger('up', { add: items, addId: [index] });
+        this.emit('add', items);
+        this.emit('up', { add: items, addId: [index] });
       }
     }
-    addArray(items: T[]): num[] {
+    addArray(items: T[]): int[] {
       let indexes = Array(items.length);
       for (let i = 0; i < items.length; i++) {
         let
@@ -92,12 +98,12 @@ module l {
       }
 
 
-      if (items.l) {
+      if (items.length) {
         this.length += items.length;
 
-        this.trigger('add', items);
+        this.emit('add', items);
         if (!this.noUpdate)
-          this.trigger("up", { add: items, addId: indexes });
+          this.emit("up", { add: items, addId: indexes });
       }
       return indexes;
     }
@@ -132,11 +138,11 @@ module l {
 
       delete this[--this.length];
 
-      this.trigger('remove', items);
+      this.emit('remove', items);
       if (!this.noUpdate)
-        this.trigger('up', { remove: items, remvId: id });
+        this.emit('up', { remove: items, remvId: id });
     }
-    removeArray(items: T[]): num[] {
+    removeArray(items: T[]): int[] {
       let indexes = Array(items.length);
       for (let i = 0; i < items.length; i++) {
         let item = items[i],
@@ -157,9 +163,9 @@ module l {
       this.length -= items.length;
 
       if (items.length) {
-        this.trigger('remove', items);
+        this.emit('remove', items);
         if (!this.noUpdate)
-          this.trigger('up', { remove: items, remvId: indexes });
+          this.emit('up', { remove: items, remvId: indexes });
       }
       return indexes;
     }
@@ -170,7 +176,7 @@ module l {
     private noUpdate: boolean;
 
     set(add?: T[]) {
-      if ((!add || !add.l) && !this.length)
+      if ((!add || !add.length) && !this.length)
         return;
       this.noUpdate = true;
       let
@@ -179,7 +185,7 @@ module l {
         addId = add ? this.addArray(add) : [];
       this.noUpdate = false;
 
-      this.trigger('up', {
+      this.emit('up', {
         remove, remvId,
         add, addId
       });
@@ -283,11 +289,13 @@ module l {
   export interface ListEditItem<T = Dic> { item: Key | T, props: Partial<T>; }
   export interface EditEvent<T = Dic> { item: T, props: Partial<T>; }
 
-  type ListConverter<T, A> = (this: L<T, A>, value: T | A, index: number) => void | T;
+  type Parse<T, A> = (this: L<T, A>, value: T | A, index: int,length:int) => void | T;
   export interface IList<T, A = T> {
     key?: string;
     child?: string;
-    converter?: ListConverter<T, A>;
+    parse?: Parse<T, A>;
+    /**@deprecated */
+    converter?: Parse<T, A>;
     g?: string[];
     sorts?: Exp[];
     clear?: boolean;
@@ -321,7 +329,7 @@ module l {
 
     itemIndex?(arg: Key | T, fromIndex?: number): number;
 
-    trigger?<K extends keyof EventMap<T>>(event: K, data?: EventMap<T>[K]): boolean;//List<T, A>;
+    emit?<K extends keyof EventMap<T>>(event: K, data?: EventMap<T>[K]): boolean;//List<T, A>;
     on?<K extends keyof EventMap<T>>(event: K, callback: EventTargetCallback<this, EventMap<T>[K]>): this;
 
     unbind?(s: S<any>): this;
@@ -341,31 +349,31 @@ module l {
 
     key: string;
     childKey?: string;
-    converter: ListConverter<T, A>;
+    parse: Parse<T, A>;
 
     /**when true this List d'nt raise events */
     slip: boolean;
 
     // #endregion
 
-    constructor(array?: Array<T | A>, options: IList<T, A> = {}) {
+    constructor(array?: Array<T | A>, opts: IList<T, A> = {}) {
       super();
 
-      this.key = options.key;
-      this.childKey = options.child;
+      this.key = opts.key;
+      this.childKey = opts.child;
 
-      this.sorts = options.sorts;
+      this.sorts = opts.sorts;
 
-      this.converter = options.converter;
+      this.parse = opts.parse || opts.converter;
 
-      if (options.g)
-        options.g.forEach(this.addGroup, this);
+      if (opts.g)
+        opts.g.forEach(this.addGroup, this);
 
       if (array)
         this.put(0, ...array);
     }
 
-    static distinct<T>(): ListConverter<T, T> {
+    static distinct<T>(): Parse<T, T> {
       return function (item: T) {
         if (this.indexOf(item) == -1)
           return item;
@@ -383,9 +391,9 @@ module l {
     // #region update items
     put(start: number, ...values: Array<T | A>) {
 
-      if (this.converter)
+      if (this.parse)
         for (let i = 0; i < values.length; i++) {
-          let t = this.converter.call(this, values[i], i + start);
+          let t = this.parse.call(this, values[i], i + start);
           if (t === undefined)
             values.splice(i--, 1);
           else values[i] = <T>t;
@@ -414,9 +422,9 @@ module l {
         }
       }
 
-      this.trigger('insert', <T[]>values);
+      this.emit('insert', <T[]>values);
       if (!this.noupdate)
-        this.trigger('update', {
+        this.emit('update', {
           tp: 'insert',
           start: start,
           items: <T[]>values
@@ -463,10 +471,10 @@ module l {
           }
         }
 
-      this.trigger('remove', removed);
+      this.emit('remove', removed);
 
       if (!this.noupdate)
-        this.trigger('update', { tp: 'remove', start, items: removed });
+        this.emit('update', { tp: 'remove', start, items: removed });
 
       return removed;
 
@@ -497,7 +505,7 @@ module l {
             let sort = this.sorts[i],
               opt: CalcOptions = { vars: {} };
             values.sort((a, b) => {
-              opt.vars.a = a;
+              opt.vars[0] = a;
               opt.vars.b = b;
               return sort.calc(opt) as any;
             });
@@ -506,7 +514,7 @@ module l {
         this.put(0, ...values);
       }
       this.noupdate = false;
-      this.trigger('update', { tp: 'set', items: <T[]>values, removed });
+      this.emit('update', { tp: 'set', items: <T[]>values, removed });
       return this;
     }
     sort(compareFn?: (a: T, b: T) => number) {
@@ -520,10 +528,10 @@ module l {
     }
     pop() {
       if (this.length)
-        return this.removeAt(this.length - 1).a;
+        return this.removeAt(this.length - 1)[0];
     }
     shift() {
-      return this.removeAt(0).a;
+      return this.removeAt(0)[0];
     }
     unshift(...values: Array<T | A>) {
       this.put(0, ...values);
@@ -556,8 +564,8 @@ module l {
       //  if (t2 !== undefined) bind.s.insertInPos(this.child(bind, oldIndex), newIndex);
       //}
 
-      //this.trigger('place', { old: oldIndex, new: newIndex, item: item });
-      this.trigger('update');
+      //this.emit('place', { old: oldIndex, new: newIndex, item: item });
+      this.emit('update');
 
       return this;
     }
@@ -578,10 +586,9 @@ module l {
     copy<N>(l: L<N>, fn: (value: T, index: number) => N): L<N>;
     copy<N>(fn: (value: T, index: number) => N): L<N>;
     copy<N>(a: L<N> | ((value: T, index: number) => N), b?: (value: T, index: number) => N) {
-      if (isF(a)) {
-        b = a;
-        a = new L<N>(this.map(b));
-      } else a.set(this.map(b));
+      if (typeof a == "function")
+        a = new L<N>(this.map(b = a));
+      else a.set(this.map(b));
 
       this.on('update', e => {
         switch (e.tp) {
@@ -617,8 +624,8 @@ module l {
       if (index !== -1) {
         item.item = Object.assign(item.item = this[index], item.props);
 
-        this.trigger('edit', [<EditEvent<T>>item]);
-        this.trigger('update', null);
+        this.emit('edit', [<EditEvent<T>>item]);
+        this.emit('update', null);
       }
       return this;
     }
@@ -632,8 +639,8 @@ module l {
         }
       }
       if (a) {
-        this.trigger('edit', null);
-        this.trigger('update', null);
+        this.emit('edit', null);
+        this.emit('update', null);
       }
       return this;
     }
@@ -680,10 +687,10 @@ module l {
       return -1;
     }
     byKey<K extends keyof T>(value, key: K = <any>this.key) {
-      return super.byKey(value, key);
+      return super.find(v => v[key] == value);
     }
     indexByKey<K extends keyof T>(value, key: K = <any>this.key) {
-      return super.indexByKey(value, key);
+      return super.findIndex(v => v[key] == value);
     }
 
     map<U>(callbackfn: (value: T, index: number, array: T[]) => U, thisArg?: any): U[] {
@@ -729,12 +736,12 @@ module l {
       return ETP.off.call(this, event, callback);
     }
 
-    trigger<K extends keyof EventMap<T>>(event: K, data?: EventMap<T>[K]): boolean;
-    trigger(event: string, data?: Tag<T>): boolean;
-    trigger(event: string, data?) {
+    emit<K extends keyof EventMap<T>>(event: K, data?: EventMap<T>[K]): boolean;
+    emit(event: string, data?: Tag<T>): boolean;
+    emit(event: string, data?) {
       if (this.slip)
         return true;
-      return ETP.trigger.call(this, event, data);
+      return ETP.emit.call(this, event, data);
     }
     // #endregion
 
@@ -773,8 +780,8 @@ module l {
         this.tags[key] = newValue;
       }
 
-      this.trigger(<any>('tag:' + key), value);
-      this.trigger("update", {
+      this.emit(<any>('tag:' + key), value);
+      this.emit("update", {
         tp: "tag",
         tag: key,
         newI: index,
@@ -862,10 +869,10 @@ module l {
         }
       } else {
         //se nao tiver item selecionado sempre selecionara o primeiro
-        this.setTag(key, this.a);
+        this.setTag(key, this[0]);
         let g = this.g[key];
         if (g)
-          g.set([this.a]);
+          g.set([this[0]]);
       }
 
 
@@ -884,7 +891,7 @@ module l {
     focusAll(key = on) {
       if (this.length) {
         if (!this.getTag(key))
-          this.setTag(key, this.a);
+          this.setTag(key, this[0]);
 
         var group = this.g[key];
         if (group)
@@ -921,12 +928,12 @@ module l {
         else this.ontag(key, listener);
       } else {
         if (group)
-          group.trigger('up');
-        else this.trigger('tag:' + key, this.getTag(key));
+          group.emit('up');
+        else this.emit('tag:' + key, this.getTag(key));
       }
       return this;
     }
-    //triggerfocus() {
+    //emitfocus() {
 
     //}
 
@@ -939,7 +946,7 @@ module l {
     unbind(s: S<any>) {
       let b = this.binds
       if (b) {
-        let i = b.findIndex(b => b.a == s);
+        let i = b.findIndex(b => b[0] == s);
         if (i != -1)
           b.splice(i, 1);
       }
@@ -948,7 +955,7 @@ module l {
     bind<TS extends ANYElement = HTMLElement>(s: S<TS>, opts?: LBond<T, A>): S<TS>;
     bind<TS extends ANYElement = HTMLElement>(s: S<TS>, opts?: LBondInsert<T, A>): S<TS>;
     bind(s: S<any>, opts: LBond<any, any> | LBondInsert<T, A> = {}) {
-      let bond = isF<LBondInsert<any, any>>(opts) ? { insert: opts } : opts;
+      let bond = typeof opts == "function" ? { insert: opts } : opts;
 
       let
         empty = (value: boolean) => {
@@ -996,7 +1003,7 @@ module l {
             case 'set':
               if (bond.clear === false)
                 remove(opts.removed, 0);
-              else if (isF(bond.clear))
+              else if (bond.clear)
                 bond.clear(s);
               else s.set();
 
@@ -1010,7 +1017,7 @@ module l {
 
       this.on('update', fn);
       if (bond.groups)
-        if (isF(bond.groups))
+        if (typeof bond.groups == "function")
           for (let g in this.g)
             this.bindGroup(s, g, bond.groups);
         else for (let g in bond.groups)
@@ -1026,9 +1033,9 @@ module l {
     }
     bindGroup<TS extends ANYElement = HTMLElement>(s: S<TS>, key: str, bond: GroupBind<T>): S<TS> {
       let g = this.g[key];
-      if (!g) throw notF(key, "group");
-      let call = (items: any[], indexes: num[], state: bool) => {
-        for (let i = 0; i < items.l; i++) {
+      if (!g) throw `group '${key}' not found`;
+      let call = (items: any[], indexes: int[], state: bool) => {
+        for (let i = 0; i < items.length; i++) {
           let id = indexes[i];
           bond.call(this, s.child(id), state, key, items[i], id, s);
         }
@@ -1041,10 +1048,10 @@ module l {
       });
       return s;
     }
-    bindToE(e: E<any,any>, prop: str): this {
+    bindToE(e: E<any, any>, prop: str): this {
       e.dt[prop] = <any>this;
       //for block circular updating event
-      let  reloading: boolean;
+      let reloading: boolean;
 
       this.on('update', () => {
         if (reloading) {
@@ -1072,7 +1079,7 @@ module l {
   }
 
   type LBondInsert<T, A> = (this: L<T, A>, value: T, index?: number, container?: S) => any;
-  interface LBond<T = any, A = T> {
+  export interface LBond<T = any, A = T> {
     /**
      * metodo que sera chamado no clear, caso n�ot tenha removera um item de cada vez*/
     clear?: false | ((container: S) => void);
