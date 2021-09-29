@@ -7,15 +7,15 @@ type bool = boolean;
 type Key = str | int;
 interface Dic<T = any> { [key: string]: T; }
 
-function l<T = any, A = T>(options: l.IList<T, A>): l.L<T, A>
-function l<T = any, A = T>(array: l.Alias<T, A>, options?: l.IList<T, A>): l.L<T, A>
-function l<T = any, A = T>(array?: Array<T | A> | l.L<T, A>, options?: l.IList<T, A>): l.L<T, A>
-function l<T = any, A = T>(array?: Array<T | A> | l.L<T, A> | l.IList<T, A>, options?: l.IList<T, A>) {
+function o<T = any, A = T>(options: o.IList<T, A>): o.L<T, A>
+function o<T = any, A = T>(array: o.Alias<T, A>, options?: o.IList<T, A>): o.L<T, A>
+function o<T = any, A = T>(array?: Array<T | A> | o.L<T, A>, options?: o.IList<T, A>): o.L<T, A>
+function o<T = any, A = T>(array?: Array<T | A> | o.L<T, A> | o.IList<T, A>, options?: o.IList<T, A>) {
   if (array && !Array.isArray(array)) {
-    options = <l.IList<any>>array
+    options = <o.IList<any>>array
     array = null;
   }
-  if (array instanceof l.L) {
+  if (array instanceof o.L) {
     if (options) {
       if (options.g)
         for (let g of options.g)
@@ -27,17 +27,15 @@ function l<T = any, A = T>(array?: Array<T | A> | l.L<T, A> | l.IList<T, A>, opt
         throw "inconpatible lists";
     }
     return array;
-  } else return new l.L<T, A>(<T[]>array, options);
+  } else return new o.L<T, A>(<T[]>array, options);
 }
 //mega dom list
-module l {
+module o {
   type CalcOptions = { vars: Dic };
   type Exp = { calc(opts: CalcOptions): any };
 
   const { prototype: ETP } = ET;
 
-  /** @deprecated */
-  const on = "on";
   //adicionar tipo especifico para listas de s� um item;
   export interface Tag<T = any> {
     value: T,
@@ -289,7 +287,7 @@ module l {
   export interface ListEditItem<T = Dic> { item: Key | T, props: Partial<T>; }
   export interface EditEvent<T = Dic> { item: T, props: Partial<T>; }
 
-  type Parse<T, A> = (this: L<T, A>, value: T | A, index: int,length:int) => void | T;
+  type Parse<T, A> = (this: L<T, A>, value: T | A, index: int, length: int) => void | T;
   export interface IList<T, A = T> {
     key?: string;
     child?: string;
@@ -514,7 +512,7 @@ module l {
         this.put(0, ...values);
       }
       this.noupdate = false;
-      this.emit('update', { tp: 'set', items: <T[]>values, removed });
+      this.emit('update', { tp: 'set', items: this, removed });
       return this;
     }
     sort(compareFn?: (a: T, b: T) => number) {
@@ -796,7 +794,7 @@ module l {
 
     // #region focus
 
-    focus(value: T | Key, shift?: boolean, ctrl?: boolean, key = on) {
+    focus(value: T | Key, key: str, shift?: boolean, ctrl?: boolean) {
       let
         group = this.g[key],
         tag = this.getTag(key),
@@ -828,7 +826,7 @@ module l {
 
       }
     }
-    focusTo(relativeValue: number, shift?: boolean, ctrl?: boolean, key = on, revert: boolean = true) {
+    focusTo(relativeValue: number, key: str, shift?: boolean, ctrl?: boolean, revert: boolean = true) {
       let
         l = this.length,
         tag = this.getTag(key);
@@ -851,7 +849,7 @@ module l {
         else if (relativeValue >= l)
           relativeValue = l - 1;
 
-        this.focus(this[relativeValue], shift, ctrl, key);
+        this.focus(this[relativeValue], key, shift, ctrl);
 
 
         if (revert && false) {
@@ -877,18 +875,18 @@ module l {
 
 
     }
-    focusToBegin(shift?: boolean, ctrl?: boolean, key = on) {
+    focusToBegin(key: str, shift?: boolean, ctrl?: boolean) {
       var tag = this.getTag(key);
       if (tag)
-        this.focusTo(-tag.index, shift, ctrl);
+        this.focusTo(-tag.index, key, shift, ctrl);
     }
-    focusToEnd(shift?: boolean, ctrl?: boolean, key = on) {
+    focusToEnd(key: str, shift?: boolean, ctrl?: boolean) {
       var tag = this.getTag(key);
 
       if (tag)
-        this.focusTo(this.length - tag.index, shift, ctrl);
+        this.focusTo(this.length - tag.index, key, shift, ctrl);
     }
-    focusAll(key = on) {
+    focusAll(key: str) {
       if (this.length) {
         if (!this.getTag(key))
           this.setTag(key, this[0]);
@@ -898,25 +896,26 @@ module l {
           group.addAll();
       }
     }
-    focusNone(key = on) {
+    /** remove focus */
+    defocus(key: str) {
       this.setTag(key);
 
       var group = this.g[key];
       if (group)
         group.set();
     }
-    focused(key = on) {
+    focused(key: str) {
       let group = this.g[key], tag: Tag<T>;
       return group ? group.values() : ((tag = this.getTag(key)) ? [tag.value] : []);
     }
 
-    hasFocus(value: T, key = on) {
+    hasFocus(value: T, key: str) {
       let group = this.g[key], tag: Tag<T>;
       return group ?
         group.indexOf(value) != -1 :
         !!(tag = this.getTag(key)) && tag.value == value;
     }
-    onfocus(listener?: (this: this, active: T, selected?: Group<T>) => void, key = on) {
+    onfocus(key: str,listener?: (this: this, active: T, selected?: Group<T>) => void) {
       if (arguments.length) {
         var group = this.g[key];
 
@@ -1031,13 +1030,13 @@ module l {
 
       return s;
     }
-    bindGroup<TS extends ANYElement = HTMLElement>(s: S<TS>, key: str, bond: GroupBind<T>): S<TS> {
-      let g = this.g[key];
-      if (!g) throw `group '${key}' not found`;
+    bindGroup<TS extends ANYElement = HTMLElement>(s: S<TS>, groupKey: str, bond: GroupBind<T>): S<TS> {
+      let g = this.g[groupKey];
+      if (!g) throw `group '${groupKey}' not found`;
       let call = (items: any[], indexes: int[], state: bool) => {
         for (let i = 0; i < items.length; i++) {
           let id = indexes[i];
-          bond.call(this, s.child(id), state, key, items[i], id, s);
+          bond.call(this, s.child(id), state, groupKey, items[i], id, s);
         }
       };
       g.on("up", e => {
@@ -1049,7 +1048,7 @@ module l {
       return s;
     }
     bindToE(e: E<any, any>, prop: str): this {
-      e.dt[prop] = <any>this;
+      e.i[prop] = <any>this;
       //for block circular updating event
       let reloading: boolean;
 
@@ -1059,7 +1058,7 @@ module l {
         } else {
           reloading = true;
 
-          e.update([prop]);
+          e.set([prop]);
         }
       });
 
@@ -1069,7 +1068,7 @@ module l {
         } else if (prop in ev) {
           let value = ev[prop];
           reloading = true;
-          e.dt[prop] = <any>this.set(<any>value);
+          e.i[prop] = <any>this.set(<any>value);
         }
 
       });
@@ -1124,7 +1123,7 @@ module l {
     /** */
     tag?: (this: L<T, A>, s: S, active: boolean, tag: string, value: T, index: number, parent: S) => void;
   }
-  type GroupBind<T> = (this: L<T>, element: S, value: boolean, key: str, item: T, index: number, parent: S) => void;
+  type GroupBind<T> = (this: L<T>, element: S, value: boolean, groupKey: str, item: T, index: number, parent: S) => void;
 
 }
-export = l;
+export = o;

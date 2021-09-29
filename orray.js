@@ -294,7 +294,7 @@ function l(array, options) {
                 this.put(0, ...values);
             }
             this.noupdate = false;
-            this.emit('update', { tp: 'set', items: values, removed });
+            this.emit('update', { tp: 'set', items: this, removed });
             return this;
         }
         sort(compareFn) {
